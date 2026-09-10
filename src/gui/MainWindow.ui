@@ -387,6 +387,7 @@
      <addaction name="actionThemeLight"/>
      <addaction name="actionThemeDark"/>
      <addaction name="actionThemeClassic"/>
+     <addaction name="actionThemeMacOS"/>
     </widget>
     <addaction name="menuTheme"/>
     <addaction name="actionCompactMode"/>
@@ -1186,6 +1187,17 @@
    </property>
    <property name="toolTip">
     <string>Set Theme: Classic</string>
+   </property>
+  </action>
+  <action name="actionThemeMacOS">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>macOS</string>
+   </property>
+   <property name="toolTip">
+    <string>Set Theme: macOS</string>
    </property>
   </action>
   <action name="actionShowMenubar">

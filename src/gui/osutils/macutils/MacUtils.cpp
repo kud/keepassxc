@@ -108,6 +108,11 @@ bool MacUtils::isDarkMode() const
     return m_appkit->isDarkMode();
 }
 
+QColor MacUtils::accentColor() const
+{
+    return m_appkit->accentColor();
+}
+
 bool MacUtils::isStatusBarDark() const
 {
     return m_appkit->isStatusBarDark();

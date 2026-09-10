@@ -43,6 +43,7 @@ public:
     bool hideProcess(pid_t pid);
     bool isHidden(pid_t pid);
     bool isDarkMode();
+    QColor accentColor();
     bool isStatusBarDark();
     bool enableAccessibility();
     bool enableScreenRecording();

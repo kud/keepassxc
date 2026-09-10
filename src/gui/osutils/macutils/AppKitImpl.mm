@@ -47,8 +47,24 @@
                                                                 object:nil];
 
         [NSApp addObserver:self forKeyPath:@"effectiveAppearance" options:NSKeyValueObservingOptionNew context:nil];
+
+        [[NSDistributedNotificationCenter defaultCenter] addObserver:self
+                                                            selector:@selector(accentColorChangedHandler:)
+                                                                name:@"AppleColorPreferencesChangedNotification"
+                                                              object:nil];
     }
     return self;
+}
+
+//
+// Notification for a change of the system accent colour in System Settings
+//
+- (void) accentColorChangedHandler:(NSNotification*) notification
+{
+    Q_UNUSED(notification)
+    if (m_appkit) {
+        emit m_appkit->interfaceThemeChanged();
+    }
 }
 
 //
@@ -140,6 +156,21 @@
 - (bool) isDarkMode
 {
     return [NSApp.effectiveAppearance.name isEqualToString:NSAppearanceNameDarkAqua];
+}
+
+//
+// Get the system accent colour as configured in System Settings, resolved for the current appearance
+//
+- (QColor) accentColor
+{
+    __block QColor color;
+    if (@available(macOS 11.0, *)) {
+        [NSApp.effectiveAppearance performAsCurrentDrawingAppearance:^{
+            NSColor* accent = [NSColor.controlAccentColor colorUsingColorSpace:NSColorSpace.sRGBColorSpace];
+            color = QColor::fromRgbF(accent.redComponent, accent.greenComponent, accent.blueComponent);
+        }];
+    }
+    return color;
 }
 
 
@@ -310,6 +341,11 @@ bool AppKit::isHidden(pid_t pid)
 bool AppKit::isDarkMode()
 {
     return [static_cast<id>(self) isDarkMode];
+}
+
+QColor AppKit::accentColor()
+{
+    return [static_cast<id>(self) accentColor];
 }
 
 bool AppKit::isStatusBarDark()

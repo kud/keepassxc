@@ -1966,12 +1966,18 @@ void MainWindow::initViewMenu()
     m_ui->actionThemeLight->setData("light");
     m_ui->actionThemeDark->setData("dark");
     m_ui->actionThemeClassic->setData("classic");
+    m_ui->actionThemeMacOS->setData("macos");
 
     auto themeActions = new QActionGroup(this);
     themeActions->addAction(m_ui->actionThemeAuto);
     themeActions->addAction(m_ui->actionThemeLight);
     themeActions->addAction(m_ui->actionThemeDark);
     themeActions->addAction(m_ui->actionThemeClassic);
+#ifdef Q_OS_MACOS
+    themeActions->addAction(m_ui->actionThemeMacOS);
+#else
+    m_ui->menuTheme->removeAction(m_ui->actionThemeMacOS);
+#endif
 
     auto theme = config()->get(Config::GUI_ApplicationTheme).toString();
     for (auto action : themeActions->actions()) {
@@ -1983,7 +1989,9 @@ void MainWindow::initViewMenu()
 
     connect(themeActions, &QActionGroup::triggered, this, [this, theme](QAction* action) {
         config()->set(Config::GUI_ApplicationTheme, action->data());
-        if ((action->data() == "classic" || theme == "classic") && action->data() != theme) {
+        // The icon cache is not rebuilt on a theme change, so macOS needs a restart like classic
+        const auto needsRestart = [](const QVariant& t) { return t == "classic" || t == "macos"; };
+        if ((needsRestart(action->data()) || needsRestart(theme)) && action->data() != theme) {
             restartApp(tr("You must restart the application to apply this setting. Would you like to restart now?"));
         } else {
             kpxcApp->applyTheme();

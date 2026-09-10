@@ -37,6 +37,7 @@ public:
     static MacUtils* instance();
 
     bool isDarkMode() const override;
+    QColor accentColor() const;
     bool isStatusBarDark() const override;
     bool isLaunchAtStartupEnabled() const override;
     void setLaunchAtStartup(bool enable) override;

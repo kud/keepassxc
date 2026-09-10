@@ -26,6 +26,9 @@
 #include "gui/osutils/OSUtils.h"
 #include "gui/styles/dark/DarkStyle.h"
 #include "gui/styles/light/LightStyle.h"
+#ifdef Q_OS_MACOS
+#include "gui/styles/macos/MacStyle.h"
+#endif
 
 #include <QFileInfo>
 #include <QFileOpenEvent>
@@ -165,6 +168,11 @@ void Application::bootstrap(const QString& uiLanguage)
 void Application::applyTheme()
 {
     auto appTheme = config()->get(Config::GUI_ApplicationTheme).toString();
+#ifndef Q_OS_MACOS
+    if (appTheme == "macos") {
+        appTheme = "auto";
+    }
+#endif
     if (appTheme == "auto") {
         appTheme = osUtils->isDarkMode() ? "dark" : "light";
 #ifdef Q_OS_WIN
@@ -174,6 +182,7 @@ void Application::applyTheme()
 #endif
     }
     QPixmapCache::clear();
+    m_macNativeTheme = (appTheme == "macos");
     if (appTheme == "light") {
         auto* s = new LightStyle;
         setPalette(s->standardPalette());
@@ -184,6 +193,13 @@ void Application::applyTheme()
         setPalette(s->standardPalette());
         setStyle(s);
         m_darkTheme = true;
+#ifdef Q_OS_MACOS
+    } else if (m_macNativeTheme) {
+        auto* s = new MacStyle;
+        setPalette(s->standardPalette());
+        setStyle(s);
+        m_darkTheme = osUtils->isDarkMode();
+#endif
     } else {
         // Classic mode, don't check for dark theme on Windows
         // because Qt 5.x does not support it
@@ -423,6 +439,15 @@ bool Application::sendLockToInstance()
 bool Application::isDarkTheme() const
 {
     return m_darkTheme;
+}
+
+/**
+ * Whether the macOS system theme is active. Constant for the life of the process: switching
+ * to or from it restarts the application, so callers may read it once at construction.
+ */
+bool Application::isMacNativeTheme() const
+{
+    return m_macNativeTheme;
 }
 
 void Application::restart()

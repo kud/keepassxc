@@ -49,6 +49,7 @@ public:
     bool event(QEvent* event) override;
     bool isAlreadyRunning() const;
     bool isDarkTheme() const;
+    bool isMacNativeTheme() const;
 
     bool sendFileNamesToRunningInstance(const QStringList& fileNames);
     bool sendLockToInstance();
@@ -69,6 +70,8 @@ private slots:
     void socketReadyRead();
 
 private:
+    bool m_macNativeTheme = false;
+
 #if defined(Q_OS_UNIX)
     /**
      * Register Unix signals such as SIGINT and SIGTERM for clean shutdown.

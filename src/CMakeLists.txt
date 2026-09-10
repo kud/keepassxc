@@ -222,6 +222,7 @@ if(APPLE)
             gui/osutils/macutils/ScreenLockListenerMac.cpp
             gui/osutils/macutils/AppKitImpl.mm
             gui/osutils/macutils/AppKit.h
+            gui/styles/macos/MacStyle.cpp
             quickunlock/TouchID.mm
             ../share/macosx/macosx.qrc)
 

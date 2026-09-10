@@ -31,6 +31,7 @@
 #include "config-keepassx.h"
 #include "core/Config.h"
 #include "core/Database.h"
+#include "gui/Application.h"
 #include "gui/DatabaseIcons.h"
 #include "gui/MainWindow.h"
 #include "gui/osutils/OSUtils.h"
@@ -274,7 +275,7 @@ QIcon Icons::icon(const QString& name, bool recolor, const QColor& overrideColor
     }
 
 #ifdef Q_OS_MACOS
-    icon = systemSymbolIcon(name);
+    icon = kpxcApp && kpxcApp->isMacNativeTheme() ? systemSymbolIcon(name) : QIcon();
     if (icon.isNull()) {
         icon = QIcon::fromTheme(name);
     }
