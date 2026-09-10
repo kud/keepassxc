@@ -222,7 +222,8 @@ if(APPLE)
             gui/osutils/macutils/ScreenLockListenerMac.cpp
             gui/osutils/macutils/AppKitImpl.mm
             gui/osutils/macutils/AppKit.h
-            quickunlock/TouchID.mm)
+            quickunlock/TouchID.mm
+            ../share/macosx/macosx.qrc)
 
     # TODO: Remove -Wno-error once deprecation warnings have been resolved.
     set_source_files_properties(quickunlock/TouchID.mm PROPERTY COMPILE_FLAGS "-Wno-old-style-cast")

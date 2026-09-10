@@ -514,3 +514,8 @@ CGEventFlags MacUtils::qtToNativeModifiers(Qt::KeyboardModifiers modifiers, bool
 
     return nativeModifiers;
 }
+
+QImage MacUtils::systemSymbolImage(const QString& name, const QSize& size, qreal devicePixelRatio) const
+{
+    return m_appkit->systemSymbolImage(name, size, devicePixelRatio);
+}

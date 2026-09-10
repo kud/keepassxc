@@ -56,6 +56,7 @@ public:
     void registerNativeEventFilter() override;
 
     void configureWindowAndHelpMenus(QMainWindow* mainWindow, QMenu* helpMenu);
+    QImage systemSymbolImage(const QString& name, const QSize& size, qreal devicePixelRatio) const;
 
     bool registerGlobalShortcut(const QString& name,
                                 Qt::Key key,

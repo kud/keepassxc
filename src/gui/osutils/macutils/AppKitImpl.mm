@@ -17,10 +17,13 @@
  */
 
 #import "AppKitImpl.h"
+#import <QImage>
 #import <QWindow>
+#import <QtMath>
 #import <QMenu>
 #import <QMenuBar>
 #import <Cocoa/Cocoa.h>
+#include <algorithm>
 #if __clang_major__ >= 13 && MAC_OS_X_VERSION_MIN_REQUIRED >= MAC_OS_VERSION_12_3
 #import <ScreenCaptureKit/ScreenCaptureKit.h>
 #endif
@@ -339,4 +342,66 @@ void AppKit::setWindowSecurity(QWindow* window, bool state)
 void AppKit::configureWindowAndHelpMenus(QMainWindow* window, QMenu* helpMenu)
 {
     [static_cast<id>(self) configureWindowAndHelpMenus:window helpMenu:helpMenu];
+}
+
+//
+// Render a system symbol (SF Symbols) as a template image that fits inside the given box.
+// Symbols are rarely square, so the point size is reduced until the image fits; the result
+// carries the requested device pixel ratio so it stays sharp on Retina displays.
+//
+QImage AppKit::systemSymbolImage(const QString& name, const QSize& size, qreal devicePixelRatio)
+{
+    if (@available(macOS 11.0, *)) {
+        NSImage* symbol = [NSImage imageWithSystemSymbolName:name.toNSString() accessibilityDescription:nil];
+        if (!symbol) {
+            return {};
+        }
+
+        const auto configured = [symbol](CGFloat pointSize) {
+            return [symbol imageWithSymbolConfiguration:[NSImageSymbolConfiguration configurationWithPointSize:pointSize
+                                                                                                        weight:NSFontWeightMedium
+                                                                                                         scale:NSImageSymbolScaleMedium]];
+        };
+        CGFloat pointSize = size.height();
+        NSImage* image = configured(pointSize);
+        const CGFloat fit = std::min(size.width() / image.size.width, size.height() / image.size.height);
+        if (fit < 1.0) {
+            image = configured(pointSize * fit);
+        }
+
+        const NSSize imageSize = image.size;
+        QImage result(qCeil(imageSize.width * devicePixelRatio),
+                      qCeil(imageSize.height * devicePixelRatio),
+                      QImage::Format_ARGB32_Premultiplied);
+        result.fill(Qt::transparent);
+        result.setDevicePixelRatio(devicePixelRatio);
+
+        CGColorSpaceRef colorSpace = CGColorSpaceCreateWithName(kCGColorSpaceSRGB);
+        CGContextRef context = CGBitmapContextCreate(result.bits(),
+                                                     result.width(),
+                                                     result.height(),
+                                                     8,
+                                                     result.bytesPerLine(),
+                                                     colorSpace,
+                                                     kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Host);
+        CGColorSpaceRelease(colorSpace);
+        if (!context) {
+            return {};
+        }
+        CGContextScaleCTM(context, devicePixelRatio, devicePixelRatio);
+
+        [NSGraphicsContext saveGraphicsState];
+        [NSGraphicsContext setCurrentContext:[NSGraphicsContext graphicsContextWithCGContext:context flipped:NO]];
+        [image drawInRect:NSMakeRect(0, 0, imageSize.width, imageSize.height)
+                 fromRect:NSZeroRect
+                operation:NSCompositingOperationSourceOver
+                 fraction:1.0];
+        [NSGraphicsContext restoreGraphicsState];
+        CGContextRelease(context);
+        return result;
+    }
+
+    Q_UNUSED(size);
+    Q_UNUSED(devicePixelRatio);
+    return {};
 }

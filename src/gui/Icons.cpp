@@ -19,10 +19,12 @@
 #include "Icons.h"
 
 #include <QBuffer>
+#include <QFile>
 #include <QIconEngine>
 #include <QImageReader>
 #include <QPaintDevice>
 #include <QPainter>
+#include <QTextStream>
 
 #include <algorithm>
 
@@ -33,6 +35,9 @@
 #include "gui/MainWindow.h"
 #include "gui/osutils/OSUtils.h"
 #include "keeshare/KeeShare.h"
+#ifdef Q_OS_MACOS
+#include "gui/osutils/macutils/MacUtils.h"
+#endif
 
 class AdaptiveIconEngine : public QIconEngine
 {
@@ -48,6 +53,91 @@ private:
 };
 
 Icons* Icons::m_instance(nullptr);
+
+#ifdef Q_OS_MACOS
+// Draws a macOS system symbol (SF Symbols) fitted and centred in the requested rectangle. The
+// symbol is rendered as a template image, so it is recoloured by AdaptiveIconEngine like any
+// bundled icon.
+class SystemSymbolIconEngine : public QIconEngine
+{
+public:
+    explicit SystemSymbolIconEngine(QString symbol)
+        : m_symbol(std::move(symbol))
+    {
+    }
+
+    void paint(QPainter* painter, const QRect& rect, QIcon::Mode, QIcon::State) override
+    {
+        const auto scale = painter->device()->devicePixelRatioF();
+        const auto image = symbolImage(rect.size(), scale);
+        if (image.isNull()) {
+            return;
+        }
+        const auto size = image.deviceIndependentSize();
+        const QPoint topLeft(rect.x() + qRound((rect.width() - size.width()) / 2),
+                             rect.y() + qRound((rect.height() - size.height()) / 2));
+        painter->drawImage(topLeft, image);
+    }
+
+    QPixmap pixmap(const QSize& size, QIcon::Mode mode, QIcon::State state) override
+    {
+        QImage img(size, QImage::Format_ARGB32_Premultiplied);
+        img.fill(0);
+        QPainter painter(&img);
+        paint(&painter, QRect(QPoint(), size), mode, state);
+        return QPixmap::fromImage(img, Qt::ImageConversionFlag::NoFormatConversion);
+    }
+
+    QIconEngine* clone() const override
+    {
+        return new SystemSymbolIconEngine(m_symbol);
+    }
+
+private:
+    QImage symbolImage(const QSize& size, qreal scale)
+    {
+        const auto key = QString("%1x%2@%3").arg(size.width()).arg(size.height()).arg(scale);
+        if (!m_cache.contains(key)) {
+            m_cache.insert(key, macUtils()->systemSymbolImage(m_symbol, size, scale));
+        }
+        return m_cache.value(key);
+    }
+
+    QString m_symbol;
+    QHash<QString, QImage> m_cache;
+};
+
+// Icon names listed in share/macosx/sf-symbols.csv are drawn as SF Symbols; any other name, or a
+// symbol this version of macOS does not provide, keeps the bundled icon.
+static QIcon systemSymbolIcon(const QString& name)
+{
+    static const QHash<QString, QString> symbols = [] {
+        QHash<QString, QString> table;
+        QFile file(":/macosx/sf-symbols.csv");
+        if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+            QTextStream in(&file);
+            while (!in.atEnd()) {
+                const auto line = in.readLine().trimmed();
+                const auto separator = line.indexOf(',');
+                if (line.startsWith('#') || separator <= 0) {
+                    continue;
+                }
+                const auto symbol = line.mid(separator + 1).trimmed();
+                if (!symbol.isEmpty()) {
+                    table.insert(line.left(separator).trimmed(), symbol);
+                }
+            }
+        }
+        return table;
+    }();
+
+    const auto symbol = symbols.value(name);
+    if (symbol.isEmpty() || macUtils()->systemSymbolImage(symbol, QSize(16, 16), 1.0).isNull()) {
+        return {};
+    }
+    return QIcon(new SystemSymbolIconEngine(symbol));
+}
+#endif
 
 Icons::Icons() = default;
 
@@ -183,7 +273,14 @@ QIcon Icons::icon(const QString& name, bool recolor, const QColor& overrideColor
         return icon;
     }
 
+#ifdef Q_OS_MACOS
+    icon = systemSymbolIcon(name);
+    if (icon.isNull()) {
+        icon = QIcon::fromTheme(name);
+    }
+#else
     icon = QIcon::fromTheme(name);
+#endif
     if (recolor) {
         icon = QIcon(new AdaptiveIconEngine(icon, overrideColor));
         icon.setIsMask(true);
@@ -204,6 +301,9 @@ Icons* Icons::instance()
         m_instance = new Icons();
 
         Q_INIT_RESOURCE(icons);
+#ifdef Q_OS_MACOS
+        Q_INIT_RESOURCE(macosx);
+#endif
         QIcon::setThemeSearchPaths(QStringList{":/icons"} << QIcon::themeSearchPaths());
         QIcon::setThemeName("application");
     }

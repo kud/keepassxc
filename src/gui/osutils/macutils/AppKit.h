@@ -20,6 +20,7 @@
 #define KEEPASSX_APPKIT_H
 
 #include <QColor>
+#include <QImage>
 #include <QObject>
 #include <QMenu>
 #include <QMainWindow>
@@ -48,6 +49,7 @@ public:
     void toggleForegroundApp(bool foreground);
     void setWindowSecurity(QWindow* window, bool state);
     void configureWindowAndHelpMenus(QMainWindow* mainWindow, QMenu* helpMenu);
+    QImage systemSymbolImage(const QString& name, const QSize& size, qreal devicePixelRatio);
 
 signals:
     void userSwitched();
